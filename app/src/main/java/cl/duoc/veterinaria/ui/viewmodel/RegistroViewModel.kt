@@ -9,8 +9,6 @@ import cl.duoc.veterinaria.data.local.entities.PedidoEntity
 import cl.duoc.veterinaria.model.Cliente
 import cl.duoc.veterinaria.model.Consulta
 import cl.duoc.veterinaria.model.DetallePedido
-import cl.duoc.veterinaria.model.EstadoConsulta
-import cl.duoc.veterinaria.model.Mascota
 import cl.duoc.veterinaria.model.Medicamento
 import cl.duoc.veterinaria.model.MedicamentoPromocional
 import cl.duoc.veterinaria.model.Pedido
@@ -18,8 +16,10 @@ import cl.duoc.veterinaria.model.TipoServicio
 import cl.duoc.veterinaria.model.Veterinario
 import cl.duoc.veterinaria.service.AgendaVeterinario
 import cl.duoc.veterinaria.service.ConsultaService
-import cl.duoc.veterinaria.service.MascotaService
 import cl.duoc.veterinaria.ui.registro.RegistroUiState
+import cl.duoc.veterinaria.util.FunctionalException
+import cl.duoc.veterinaria.util.PersistenceException
+import cl.duoc.veterinaria.util.ValidationException
 import cl.duoc.veterinaria.util.esDecimalValido
 import cl.duoc.veterinaria.util.esNumeroValido
 import kotlinx.coroutines.delay
@@ -30,7 +30,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Clock
-import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -119,6 +118,13 @@ class RegistroViewModel(
             try {
                 Log.d(TAG, "Iniciando procesarRegistro...")
                 
+                _serviceState.value = ServiceState.Running("Validando datos...")
+                delay(1000)
+
+                if (currentState.duenoNombre.isBlank() && currentState.mascotaNombre.isBlank() && currentState.carrito.isEmpty()) {
+                    throw ValidationException("No se ha ingresado información para registrar.")
+                }
+
                 _serviceState.value = ServiceState.Running("Calculando costos...")
                 delay(1500)
                 
@@ -126,7 +132,7 @@ class RegistroViewModel(
                 _serviceState.value = ServiceState.Running("Confirmando reserva y pedido...")
                 delay(1500)
 
-                val nombreCliente = if (currentState.duenoNombre.isBlank()) "Venta Mostrador" else currentState.duenoNombre
+                val nombreCliente = currentState.duenoNombre.ifBlank { "Venta Mostrador" }
                 val esSoloFarmacia = currentState.mascotaNombre.isBlank()
 
                 Log.d(TAG, "Cliente: $nombreCliente, Es solo farmacia: $esSoloFarmacia")
@@ -148,10 +154,8 @@ class RegistroViewModel(
 
                 if (!esSoloFarmacia) {
                     Log.d(TAG, "Registrando atención veterinaria...")
-                    // Obtener consultas existentes para evitar choques
                     val consultasExistentes = repository.consultasLocal.first()
                     
-                    // Buscar siguiente disponibilidad real
                     val (veterinarioAsignado, fechaHoraReal) = AgendaVeterinario.buscarSiguienteDisponible(
                         consultasExistentes, 
                         Clock.systemDefaultZone()
@@ -195,9 +199,18 @@ class RegistroViewModel(
                 _serviceState.value = ServiceState.Stopped
                 Log.i(TAG, "Registro procesado exitosamente.")
 
+            } catch (e: ValidationException) {
+                Log.w(TAG, "Error de validación: ${e.message}")
+                _serviceState.value = ServiceState.Error(e.message ?: "Error de validación", e.code)
+            } catch (e: PersistenceException) {
+                Log.e(TAG, "Error de persistencia: ${e.message}", e)
+                _serviceState.value = ServiceState.Error(e.message ?: "Error al guardar los datos", e.code)
+            } catch (e: FunctionalException) {
+                Log.w(TAG, "Error funcional: ${e.message}")
+                _serviceState.value = ServiceState.Error(e.message ?: "Error funcional", e.code)
             } catch (e: Exception) {
-                Log.e(TAG, "Error durante el procesamiento del registro: ${e.message}", e)
-                _serviceState.value = ServiceState.Error("Error al procesar el registro. Intente nuevamente.")
+                Log.e(TAG, "Error inesperado durante el registro: ${e.message}", e)
+                _serviceState.value = ServiceState.Error("Ocurrió un error inesperado. Por favor, contacte a soporte.", "ERR_UNEXPECTED")
             }
         }
     }

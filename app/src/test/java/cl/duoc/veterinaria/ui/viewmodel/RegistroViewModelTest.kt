@@ -128,7 +128,7 @@ class RegistroViewModelTest {
 
         val uiState = viewModel.uiState.value
         assertNotNull(uiState.consultaRegistrada)
-        // La descripción de CONTROL es "Control Sano", por lo que el resultado es "Atención de Control Sano"
+        // La descripción de CONTROL es "Control Sano"
         assertEquals("Atención de Control Sano", uiState.consultaRegistrada?.descripcion)
 
         assertTrue(viewModel.serviceState.value is ServiceState.Stopped)
