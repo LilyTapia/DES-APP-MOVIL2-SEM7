@@ -52,12 +52,13 @@ fun LoginScreen(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // --- LOGO AGRANDADO ---
         Image(
-            painter = painterResource(id = R.drawable.logoinicial), // Usamos el logo consistente
+            painter = painterResource(id = R.drawable.logoinicial),
             contentDescription = "Logo Veterinaria",
-            modifier = Modifier.size(150.dp)
+            modifier = Modifier.size(220.dp) // Aumentado de 150dp a 220dp
         )
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         Text(
             text = if (uiState.isRegisterMode) "Crear Cuenta" else "Bienvenido",
@@ -66,7 +67,7 @@ fun LoginScreen(
             color = MaterialTheme.colorScheme.primary
         )
         
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         AnimatedContent(targetState = uiState.isRegisterMode, label = "auth_mode") { isRegister ->
             Column(horizontalAlignment = Alignment.CenterHorizontally) {

@@ -8,16 +8,15 @@ import cl.duoc.veterinaria.data.local.entities.ConsultaEntity
 import cl.duoc.veterinaria.data.local.entities.MascotaEntity
 import cl.duoc.veterinaria.data.local.entities.PedidoEntity
 import cl.duoc.veterinaria.data.local.entities.UsuarioEntity
-import cl.duoc.veterinaria.util.PersistenceException
+import cl.duoc.veterinaria.data.remote.RetrofitClient
+import cl.duoc.veterinaria.model.Veterinario
+import cl.duoc.veterinaria.service.AgendaVeterinario
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
-/**
- * Define el contrato para el repositorio de la veterinaria.
- */
 interface IVeterinariaRepository {
     val totalMascotasRegistradas: StateFlow<Int>
     val totalConsultasRealizadas: StateFlow<Int>
@@ -29,29 +28,18 @@ interface IVeterinariaRepository {
     val usuariosLocal: Flow<List<UsuarioEntity>>
     val pedidosLocal: Flow<List<PedidoEntity>>
 
-    fun registrarAtencion(nombreDueno: String, cantidadMascotas: Int, nombreMascota: String, especieMascota: String, tipoServicio: String? = null, edad: Int = 0, peso: Double = 0.0, consultaId: String? = null, fechaHora: String? = null, veterinario: String? = null, costo: Double = 0.0)
-    
     fun init(context: Context)
-
-    fun eliminarMascota(nombreMascota: String)
-    fun editarMascota(textoOriginal: String, textoNuevo: String)
-    
-    suspend fun agregarMascotaRoom(nombre: String, especie: String, edad: Int, peso: Double, dueno: String)
-    suspend fun eliminarMascotaRoom(mascota: MascotaEntity)
-    
-    suspend fun agregarConsultaRoom(consulta: ConsultaEntity)
-
+    fun registrarAtencion(nombreDueno: String, nombreMascota: String, especieMascota: String, tipoServicio: String? = null, edad: Int = 0, peso: Double = 0.0, consultaId: String? = null, fechaHora: String? = null, veterinario: String? = null, costo: Double = 0.0)
     suspend fun registrarUsuario(nombre: String, email: String, pass: String): UsuarioEntity
     suspend fun buscarUsuario(email: String, user: String): UsuarioEntity?
-    
     suspend fun registrarPedidoRoom(pedido: PedidoEntity)
+    suspend fun obtenerVeterinariosRemotos(): List<Veterinario>
+    suspend fun eliminarMascotaRoom(mascota: MascotaEntity)
 }
 
-/**
- * Implementación Singleton del repositorio.
- */
 object VeterinariaRepository : IVeterinariaRepository {
-    private val TAG = "VeterinariaRepository"
+    private const val TAG = "VeterinariaRepo"
+    
     private val _totalMascotasRegistradas = MutableStateFlow(0)
     private val _totalConsultasRealizadas = MutableStateFlow(0)
     private val _nombreUltimoDueno = MutableStateFlow("N/A")
@@ -63,170 +51,124 @@ object VeterinariaRepository : IVeterinariaRepository {
     private val scope = CoroutineScope(Dispatchers.IO)
     private var isInitialized = false
 
-    override val totalMascotasRegistradas: StateFlow<Int> = _totalMascotasRegistradas.asStateFlow()
-    override val totalConsultasRealizadas: StateFlow<Int> = _totalConsultasRealizadas.asStateFlow()
-    override val nombreUltimoDueno: StateFlow<String> = _nombreUltimoDueno.asStateFlow()
-    override val listaMascotas: StateFlow<List<String>> = _listaMascotas.asStateFlow()
-    override val ultimaAtencionTipo: StateFlow<String?> = _ultimaAtencionTipo.asStateFlow()
+    override val totalMascotasRegistradas = _totalMascotasRegistradas.asStateFlow()
+    override val totalConsultasRealizadas = _totalConsultasRealizadas.asStateFlow()
+    override val nombreUltimoDueno = _nombreUltimoDueno.asStateFlow()
+    override val listaMascotas = _listaMascotas.asStateFlow()
+    override val ultimaAtencionTipo = _ultimaAtencionTipo.asStateFlow()
 
-    override val mascotasLocal: Flow<List<MascotaEntity>> by lazy {
-        database?.mascotaDao()?.getAllMascotas() ?: flowOf(emptyList())
+    override val mascotasLocal: Flow<List<MascotaEntity>> by lazy { 
+        database?.mascotaDao()?.getAllMascotas() ?: flowOf(emptyList()) 
     }
-
-    override val consultasLocal: Flow<List<ConsultaEntity>> by lazy {
-        database?.consultaDao()?.getAllConsultas() ?: flowOf(emptyList())
+    override val consultasLocal: Flow<List<ConsultaEntity>> by lazy { 
+        database?.consultaDao()?.getAllConsultas() ?: flowOf(emptyList()) 
     }
-
-    override val usuariosLocal: Flow<List<UsuarioEntity>> by lazy {
-        database?.usuarioDao()?.getAllUsuarios() ?: flowOf(emptyList())
+    override val usuariosLocal: Flow<List<UsuarioEntity>> by lazy { 
+        database?.usuarioDao()?.getAllUsuarios() ?: flowOf(emptyList()) 
     }
-
-    override val pedidosLocal: Flow<List<PedidoEntity>> by lazy {
-        database?.pedidoDao()?.getAllPedidos() ?: flowOf(emptyList())
+    override val pedidosLocal: Flow<List<PedidoEntity>> by lazy { 
+        database?.pedidoDao()?.getAllPedidos() ?: flowOf(emptyList()) 
     }
 
     override fun init(context: Context) {
         if (isInitialized) return
         
+        Log.d(TAG, "Levantando repositorio y base de datos...")
         val appContext = context.applicationContext
         prefs = appContext.getSharedPreferences("veterinaria_prefs", Context.MODE_PRIVATE)
         database = VeterinariaDatabase.getDatabase(appContext)
         
-        val ultimoGuardado = prefs?.getString("ULTIMO_TIPO", null)
-        if (ultimoGuardado != null) {
-            _ultimaAtencionTipo.value = ultimoGuardado
+        // Carga inicial de veterinarios desde la API
+        scope.launch {
+            val lista = obtenerVeterinariosRemotos()
+            AgendaVeterinario.veterinarios = lista
         }
-        
+
+        // Observamos cambios en mascotas para actualizar contadores de la UI
         scope.launch {
             mascotasLocal.collect { lista ->
                 _totalMascotasRegistradas.value = lista.size
+                _listaMascotas.value = lista.map { "${it.nombre} (${it.especie})" }
             }
         }
-
+        
         scope.launch {
-            try {
-                val usuariosActuales = database?.usuarioDao()?.getAllUsuarios()?.firstOrNull()
-                if (usuariosActuales.isNullOrEmpty()) {
-                    registrarUsuario("liliana", "liliana@gmail.com", "123456")
-                    registrarUsuario("Colomba", "Colomba@gmail.com", "colomba123")
-                    registrarUsuario("Wilda", "Wilda@gmail.com", "wilda1")
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error initializing default users", e)
+            consultasLocal.collect { lista ->
+                _totalConsultasRealizadas.value = lista.size
             }
         }
         
         isInitialized = true
     }
 
-    override fun registrarAtencion(nombreDueno: String, cantidadMascotas: Int, nombreMascota: String, especieMascota: String, tipoServicio: String?, edad: Int, peso: Double, consultaId: String?, fechaHora: String?, veterinario: String?, costo: Double) {
-        _nombreUltimoDueno.value = nombreDueno
-        _totalMascotasRegistradas.update { it + cantidadMascotas }
-        _totalConsultasRealizadas.update { it + 1 }
-        
-        if (tipoServicio != null) {
-            _ultimaAtencionTipo.value = tipoServicio
-            prefs?.edit()?.putString("ULTIMO_TIPO", tipoServicio)?.apply()
+    override suspend fun obtenerVeterinariosRemotos(): List<Veterinario> {
+        return try {
+            val apiResponse = RetrofitClient.instance.getVeterinarios()
+            Log.d(TAG, "RETROFIT SUCCESS: Datos cargados desde el servidor")
+            if (apiResponse.isNotEmpty()) apiResponse else getListaRespaldo()
+        } catch (e: Exception) {
+            // Si la API falla (ej: sin internet), tiramos de la lista local por seguridad
+            Log.e(TAG, "RETROFIT ERROR: Usando protocolo de respaldo (Fallback)")
+            getListaRespaldo()
         }
+    }
 
-        val nuevaEntrada = "Mascota: $nombreMascota ($especieMascota) - Dueño: $nombreDueno"
-        _listaMascotas.update { it + nuevaEntrada }
+    private fun getListaRespaldo() = listOf(
+        Veterinario("Dr. Pérez", "General", "https://randomuser.me/api/portraits/men/1.jpg"),
+        Veterinario("Dra. González", "Cirugía", "https://randomuser.me/api/portraits/women/1.jpg"),
+        Veterinario("Dr. Soto", "Dermatología", "https://randomuser.me/api/portraits/men/2.jpg")
+    )
+
+    override fun registrarAtencion(nombreDueno: String, nombreMascota: String, especieMascota: String, tipoServicio: String?, edad: Int, peso: Double, consultaId: String?, fechaHora: String?, veterinario: String?, costo: Double) {
+        _nombreUltimoDueno.value = nombreDueno
+        _ultimaAtencionTipo.value = tipoServicio
         
         scope.launch {
             try {
-                agregarMascotaRoom(nombreMascota, especieMascota, edad, peso, nombreDueno)
-                
+                val nuevaMascota = MascotaEntity(
+                    nombre = nombreMascota,
+                    especie = especieMascota,
+                    edad = edad,
+                    pesoKg = peso,
+                    ultimaVacunacion = LocalDate.now(),
+                    nombreDueno = nombreDueno
+                )
+                database?.mascotaDao()?.insertMascota(nuevaMascota)
+
                 if (consultaId != null && fechaHora != null && veterinario != null) {
-                    val entity = ConsultaEntity(
+                    val nuevaConsulta = ConsultaEntity(
                         idConsulta = consultaId,
                         mascotaNombre = nombreMascota,
                         duenoNombre = nombreDueno,
-                        descripcion = "Atención de $tipoServicio",
+                        descripcion = tipoServicio ?: "Consulta General",
                         fechaHora = fechaHora,
                         veterinario = veterinario,
                         costo = costo,
                         estado = "Pendiente"
                     )
-                    agregarConsultaRoom(entity)
+                    database?.consultaDao()?.insertConsulta(nuevaConsulta)
                 }
-            } catch (e: PersistenceException) {
-                Log.e(TAG, "Error persistiendo atención: ${e.message}")
+                Log.d(TAG, "Atención guardada correctamente en Room")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error persistiendo la atención: ${e.message}")
             }
         }
     }
 
     override suspend fun registrarUsuario(nombre: String, email: String, pass: String): UsuarioEntity {
-        try {
-            val entity = UsuarioEntity(nombreUsuario = nombre, email = email, pass = pass)
-            database?.usuarioDao()?.insertUsuario(entity)
-            return entity
-        } catch (e: Exception) {
-            throw PersistenceException("Error al registrar usuario en la base de datos", e)
-        }
+        val user = UsuarioEntity(nombreUsuario = nombre, email = email, pass = pass)
+        database?.usuarioDao()?.insertUsuario(user)
+        return user
     }
 
-    override suspend fun buscarUsuario(email: String, user: String): UsuarioEntity? {
-        try {
-            return database?.usuarioDao()?.findByEmailOrUser(email, user)
-        } catch (e: Exception) {
-            throw PersistenceException("Error al buscar usuario", e)
-        }
-    }
-
-    override suspend fun agregarMascotaRoom(nombre: String, especie: String, edad: Int, peso: Double, dueno: String) {
-        try {
-            val nuevaMascota = MascotaEntity(
-                nombre = nombre,
-                especie = especie,
-                edad = edad,
-                pesoKg = peso,
-                ultimaVacunacion = LocalDate.now(),
-                nombreDueno = dueno
-            )
-            database?.mascotaDao()?.insertMascota(nuevaMascota)
-        } catch (e: Exception) {
-            throw PersistenceException("Error al guardar la mascota", e)
-        }
-    }
-
-    override suspend fun agregarConsultaRoom(consulta: ConsultaEntity) {
-        try {
-            database?.consultaDao()?.insertConsulta(consulta)
-        } catch (e: Exception) {
-            throw PersistenceException("Error al guardar la consulta", e)
-        }
-    }
+    override suspend fun buscarUsuario(email: String, user: String): UsuarioEntity? = 
+        database?.usuarioDao()?.findByEmailOrUser(email, user)
 
     override suspend fun registrarPedidoRoom(pedido: PedidoEntity) {
-        try {
-            database?.pedidoDao()?.insertPedido(pedido)
-        } catch (e: Exception) {
-            throw PersistenceException("Error al guardar el pedido", e)
-        }
+        database?.pedidoDao()?.insertPedido(pedido)
     }
 
     override suspend fun eliminarMascotaRoom(mascota: MascotaEntity) {
-        try {
-            database?.mascotaDao()?.deleteMascota(mascota)
-        } catch (e: Exception) {
-            throw PersistenceException("Error al eliminar la mascota", e)
-        }
-    }
-
-    override fun eliminarMascota(nombreMascota: String) {
-        _listaMascotas.update { lista ->
-            val nuevaLista = lista.filterNot { it == nombreMascota }
-            if (nuevaLista.size < lista.size) {
-                _totalConsultasRealizadas.update { if (it > 0) it - 1 else 0 }
-                _totalMascotasRegistradas.update { if (it > 0) it - 1 else 0 }
-            }
-            nuevaLista
-        }
-    }
-
-    override fun editarMascota(textoOriginal: String, textoNuevo: String) {
-        _listaMascotas.update { lista ->
-            lista.map { if (it == textoOriginal) textoNuevo else it }
-        }
+        database?.mascotaDao()?.deleteMascota(mascota)
     }
 }

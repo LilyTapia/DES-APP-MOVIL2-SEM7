@@ -1,18 +1,15 @@
 package cl.duoc.veterinaria.ui.registro
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Badge
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -22,12 +19,14 @@ import cl.duoc.veterinaria.R
 import cl.duoc.veterinaria.model.TipoServicio
 import cl.duoc.veterinaria.ui.viewmodel.RegistroViewModel
 
-/**
- * ServicioScreen es el Composable para la pantalla donde se selecciona el tipo de servicio.
- * Se ha añadido la imagen perrito1 para mejorar la interfaz.
- */
 @Composable
-fun ServicioScreen(viewModel: RegistroViewModel, onNextClicked: () -> Unit) {
+fun ServicioScreen(
+    viewModel: RegistroViewModel, 
+    onNextClicked: () -> Unit,
+    onSelectVeterinario: () -> Unit
+) {
+    val uiState by viewModel.uiState.collectAsState()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -35,45 +34,100 @@ fun ServicioScreen(viewModel: RegistroViewModel, onNextClicked: () -> Unit) {
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.height(40.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
-        // Imagen perrito1 solicitada
         Image(
             painter = painterResource(id = R.drawable.perrito1),
             contentDescription = "Imagen de servicios veterinarios",
-            modifier = Modifier.size(180.dp)
+            modifier = Modifier.size(150.dp)
         )
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Seleccione un Servicio", 
+            text = "Configura la Atención", 
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
         )
         
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+            ),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    "Especialista", 
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                if (uiState.veterinarioSeleccionado != null) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = uiState.veterinarioSeleccionado?.nombre ?: "",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                } else {
+                    Text(
+                        "Puedes elegir un médico de nuestro equipo remoto.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
+                
+                Button(
+                    onClick = onSelectVeterinario,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Icon(Icons.Default.Badge, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(if (uiState.veterinarioSeleccionado != null) "Cambiar Especialista" else "Seleccionar Especialista (API)")
+                }
+            }
+        }
+
+        Divider(modifier = Modifier.padding(vertical = 8.dp))
+
         Text(
-            text = "¿Qué atención necesita hoy?", 
-            style = MaterialTheme.typography.bodyMedium,
+            text = "¿Qué servicio necesitas?", 
+            style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.secondary,
-            modifier = Modifier.padding(bottom = 32.dp)
+            modifier = Modifier.align(Alignment.Start).padding(bottom = 12.dp)
         )
 
-        // Itera sobre todos los valores del enum TipoServicio para crear un botón para cada uno.
         TipoServicio.values().forEach { servicio ->
-            Button(
+            OutlinedButton(
                 onClick = { 
                     viewModel.updateTipoServicio(servicio)
                     onNextClicked()
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp)
+                    .height(50.dp),
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.primary
+                )
             ) {
                 Text(servicio.descripcion, fontWeight = FontWeight.SemiBold)
             }
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
         }
     }
 }

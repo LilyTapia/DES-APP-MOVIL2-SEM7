@@ -68,14 +68,7 @@
             android:exported="true"
             android:readPermission="cl.duoc.veterinaria.READ_MASCOTAS" />
 
-        <!-- Broadcast Receiver (Paso 1: Broadcast Receiver) -->
-        <receiver
-            android:name=".receiver.ConnectivityReceiver"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.net.conn.CONNECTIVITY_CHANGE" />
-            </intent-filter>
-        </receiver>
+        <!-- El ConnectivityReceiver ya no se declara aquí porque se registra manualmente en MainActivity -->
 
     </application>
 

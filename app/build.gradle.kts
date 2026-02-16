@@ -53,6 +53,7 @@ dependencies {
     // Core
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.service)
     implementation(libs.androidx.activity.compose)
 
     // Compose BOM
@@ -62,7 +63,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     
-    // Iconos Material extendidos (para Pets y otros iconos específicos)
+    // Iconos Material extendidos
     implementation("androidx.compose.material:material-icons-extended")
 
     // Navigation + ViewModel
@@ -72,6 +73,13 @@ dependencies {
     // Coroutines & LiveData
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.lifecycle.livedata.ktx)
+
+    // Retrofit
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.gson)
+
+    // Coil
+    implementation(libs.coil.compose)
 
     // Room
     implementation(libs.androidx.room.runtime)

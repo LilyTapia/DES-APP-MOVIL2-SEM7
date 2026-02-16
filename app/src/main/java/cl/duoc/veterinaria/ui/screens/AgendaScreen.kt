@@ -1,7 +1,6 @@
 package cl.duoc.veterinaria.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -18,13 +17,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import cl.duoc.veterinaria.data.local.entities.ConsultaEntity
 import cl.duoc.veterinaria.data.local.entities.MascotaEntity
+import cl.duoc.veterinaria.service.AgendaVeterinario
 import cl.duoc.veterinaria.ui.viewmodel.ConsultaViewModel
+import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,7 +66,6 @@ fun AgendaScreen(
                 Text(text = "Revisa tus próximas citas y tus mascotas.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.secondary)
             }
 
-            // SECCIÓN PRÓXIMAS CITAS (Agenda Pura)
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.CalendarMonth, contentDescription = null, modifier = Modifier.size(24.dp), tint = MaterialTheme.colorScheme.primary)
@@ -88,7 +89,6 @@ fun AgendaScreen(
                 }
             }
 
-            // SECCIÓN MIS MASCOTAS (Información básica)
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Pets, contentDescription = null, modifier = Modifier.size(24.dp), tint = MaterialTheme.colorScheme.primary)
@@ -114,6 +114,10 @@ fun AgendaScreen(
 
 @Composable
 fun AgendaItemCard(consulta: ConsultaEntity) {
+    // Buscamos en la lista global que Retrofit actualiza. Si no existe, usamos una foto por defecto de médico.
+    val veterinarioData = AgendaVeterinario.veterinarios.find { it.nombre.trim() == consulta.veterinario.trim() }
+    val fotoUrl = veterinarioData?.fotoUrl ?: "https://img.icons8.com/color/96/doctor-male.png"
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -123,18 +127,22 @@ fun AgendaItemCard(consulta: ConsultaEntity) {
         shape = RoundedCornerShape(16.dp)
     ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier.size(48.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surface),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-            }
+            AsyncImage(
+                model = fotoUrl,
+                contentDescription = "Foto de ${consulta.veterinario}",
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surface),
+                contentScale = ContentScale.Crop
+            )
+            
             Spacer(modifier = Modifier.width(16.dp))
             Column {
                 Text(text = consulta.fechaHora, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Text(text = "Paciente: ${consulta.mascotaNombre}", style = MaterialTheme.typography.bodyMedium)
-                Text(text = "Veterinario: ${consulta.veterinario}", style = MaterialTheme.typography.labelMedium)
-                Text(text = consulta.descripcion, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                Text(text = "Veterinario: ${consulta.veterinario}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                Text(text = "Servicio: ${consulta.descripcion.replace("Atención de ", "")}", style = MaterialTheme.typography.labelSmall)
             }
         }
     }
@@ -142,6 +150,20 @@ fun AgendaItemCard(consulta: ConsultaEntity) {
 
 @Composable
 fun MascotaSimpleCard(mascota: MascotaEntity) {
+    val especieLower = mascota.especie.lowercase().trim()
+    val mascotaAvatarUrl = when (especieLower) {
+        "perro" -> "https://img.icons8.com/color/96/dog.png"
+        "gato" -> "https://img.icons8.com/color/96/cat.png"
+        "conejo" -> "https://img.icons8.com/color/96/rabbit.png"
+        "hamster" -> "https://img.icons8.com/color/96/hamster.png"
+        "tortuga" -> "https://img.icons8.com/color/96/turtle.png"
+        "pez" -> "https://img.icons8.com/color/96/fish.png"
+        "ave", "pajaro" -> "https://img.icons8.com/color/96/parrot.png"
+        "huron" -> "https://img.icons8.com/color/96/ferret.png"
+        "iguana" -> "https://img.icons8.com/color/96/iguana.png"
+        else -> "https://img.icons8.com/color/96/animal-footprint.png"
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -152,12 +174,33 @@ fun MascotaSimpleCard(mascota: MascotaEntity) {
         shape = RoundedCornerShape(12.dp)
     ) {
         Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Default.Pets, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-            }
+            SubcomposeAsyncImage(
+                model = mascotaAvatarUrl,
+                contentDescription = "Icono de ${mascota.nombre}",
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f))
+                    .padding(4.dp),
+                contentScale = ContentScale.Fit,
+                loading = { 
+                    Icon(
+                        imageVector = Icons.Default.Pets, 
+                        contentDescription = null, 
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                        modifier = Modifier.padding(4.dp)
+                    ) 
+                },
+                error = { 
+                    Icon(
+                        imageVector = Icons.Default.Pets, 
+                        contentDescription = null, 
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(4.dp)
+                    ) 
+                }
+            )
+            
             Spacer(modifier = Modifier.width(12.dp))
             Column {
                 Text(text = mascota.nombre, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)

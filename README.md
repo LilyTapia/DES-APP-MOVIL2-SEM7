@@ -1,72 +1,72 @@
-# 🐾 VeterinariaApp - Semana 5: Gestión de Memoria y Optimización
+# Semana 6: Integrando librerías externas para ampliar funcionalidades móviles
 
-## 📖 Descripción del Proyecto
-**VeterinariaApp** es una solución móvil integral diseñada para la gestión de atenciones veterinarias y ventas de farmacia. Durante esta quinta semana, el proyecto se ha centrado en la **detección y corrección de 'memory leaks' y en la optimización del uso de memoria** utilizando herramientas profesionales como Android Profiler y LeakCanary.
-
----
-
-## 📄 Documentación de la Actividad (Semana 5)
-Puedes revisar el informe detallado con las evidencias de perfilado de memoria, implementación de LeakCanary y las correcciones de código en el siguiente enlace:
-
-👉 **[Ver Informe de Gestión de Memoria (PDF)](./Documentación/Liliana_Tapia_Gestion_Memoria_S5.pdf)**
-
-*También puedes encontrar la documentación técnica general aquí:*
-👉 **[Ver Informe de Documentación Técnica Básica (PDF)](./Documentación/Informe%20documentación%20técnica%20básica.pdf)**
+## 📝 Descripción de la Actividad
+Este proyecto corresponde a la fase de potenciación de la **VeterinariaApp**, donde se han implementado técnicas avanzadas de desarrollo Android. El objetivo principal ha sido mejorar la conectividad, el rendimiento y la calidad del código mediante la integración de librerías externas, gestión de procesos en segundo plano y diagnóstico de memoria.
 
 ---
 
-## 🛠️ Avances Semana 5: Gestión de Memoria
+## 🛠️ Tecnologías e Implementaciones Técnicas
 
-### 1. Diagnóstico Inicial (Android Profiler)
-- Análisis del **Heap** en tiempo real para monitorear el consumo de memoria durante la ejecución de flujos completos de la aplicación.
-- Identificación de un comportamiento estable y saludable de la memoria, sin fugas evidentes en el uso normal.
-- Uso de **Heap Dumps** para obtener una "fotografía" detallada de los objetos en memoria en un instante específico.
+### 1. Procesos en Segundo Plano (Asincronía)
+Se seleccionó el flujo de **Registro de Consultas y Sincronización de Especialistas**. Para garantizar una experiencia fluida:
+*   **Kotlin Coroutines:** Se utilizan para realizar peticiones de red y operaciones de base de datos (Room) fuera del hilo principal (Main Thread), evitando el bloqueo de la interfaz.
+*   **Justificación:** El uso de Corrutinas permite escribir código asíncrono de forma secuencial y legible, optimizando el consumo de recursos.
 
-### 2. Detección Automática (LeakCanary)
-- Integración de **LeakCanary 2.14** en la compilación de `debug` para la detección automática de fugas de memoria en `Activities`, `Fragments` y `Views`.
-- Tras la ejecución de múltiples flujos de navegación y rotación de pantalla, LeakCanary reportó **0 fugas de memoria**, validando la solidez de la arquitectura MVVM implementada.
+### 2. Integración de Librerías Externas (Paso 6)
+*   **Retrofit (API REST):** Utilizada para obtener la lista de médicos veterinarios desde un servidor externo.
+    *   *Justificación Técnica:* Provee una gestión tipada de las respuestas JSON y se integra nativamente con Corrutinas, lo que facilita el manejo de errores de red.
+*   **Coil (Carga de Imágenes):** Implementada para renderizar las fotografías de los especialistas y avatares de mascotas.
+    *   *Justificación Técnica:* Es una librería liviana optimizada para Jetpack Compose que gestiona automáticamente el caché y el redimensionamiento de imágenes.
+*   **LeakCanary (Diagnóstico):** Herramienta esencial para la detección de fugas de memoria.
+    *   *Justificación Técnica:* Permite identificar objetos que no están siendo recolectados por el Garbage Collector, asegurando que la app no consuma memoria innecesaria en sesiones prolongadas.
 
-### 3. Corrección de Malas Prácticas (Análisis de Código)
-- **Identificación de Fuga Latente:** A pesar de los resultados positivos de las herramientas, un análisis de código estático reveló una mala práctica en `VeterinariaRepository`. El Singleton almacenaba una referencia a un `Context` que podía ser una `Activity`, creando un riesgo de **Memory Leak**.
-- **Solución Implementada:** Se modificó el repositorio para que utilice exclusivamente `context.applicationContext`, garantizando que nunca se retenga una referencia a una pantalla.
-- **Optimización de Recursos:** Se mejoró el algoritmo de búsqueda de citas en `AgendaVeterinario` para evitar bucles infinitos en corutinas, previniendo la fuga de recursos de CPU y memoria en hilos de fondo.
+### 3. Debugging y Gestión de Errores (Paso 3)
+*   **Resiliencia:** Se implementaron bloques `try-catch` en el repositorio para manejar excepciones de red.
+*   **Logcat:** Registro de errores críticos para facilitar el mantenimiento.
+*   **Modo Respaldo:** La app cuenta con una lista de especialistas local en caso de que la API remota no esté disponible.
 
-### 4. Validación Posterior a la Corrección
-- Se repitieron las pruebas con **Profiler** y **LeakCanary** después de las correcciones.
-- Los resultados confirmaron que la aplicación no solo sigue libre de fugas, sino que ahora es arquitectónicamente más robusta y segura contra problemas de memoria a futuro.
-
----
-
-## 🏗️ Pilares Tecnológicos y Arquitectura
-
-### 1. Arquitectura y Patrones
-- **MVVM (Model-View-ViewModel):** Separación clara entre la lógica de estado y la interfaz Compose.
-- **StateFlow y Coroutines:** Manejo reactivo de estados con optimización de suspensión para tareas asíncronas.
-- **Repository Pattern:** Abstracción unificada de fuentes de datos locales.
-
-### 2. Componentes Nativos
-- **Services (Foreground):** Feedback mediante notificaciones persistentes.
-- **Broadcast Receivers:** Monitoreo global del estado de conectividad.
-- **Room Persistence:** Persistencia robusta para Mascotas, Consultas y Pedidos.
-- **Content Provider:** Acceso seguro a datos para aplicaciones externas.
+### 4. Diagnóstico de Memory Leaks (Paso 4 y 5)
+Se utilizó **LeakCanary** para diagnosticar la gestión de memoria. 
+*   **Escenario Detectado:** Se identificó una fuga real provocada por una referencia estática a la `MainActivity` (Simulador de Fuga).
+*   **Corrección:** Se eliminaron las referencias estáticas y se aseguró la liberación de recursos (como los receivers de conectividad) en el método `onDestroy()`.
 
 ---
 
-## 📂 Estructura del Proyecto
-```text
-cl.duoc.veterinaria
-├── data             # Repositorio y persistencia (Room / Entities)
-├── model            # Entidades de dominio y modelos de datos
-├── service          # Lógica de agenda, costos y NotificacionService
-├── ui               # Componentes de interfaz (Compose)
-│   ├── registro     # Flujo de agendamiento y pantallas de resumen
-│   ├── viewmodel    # Lógica de estado y diagnóstico
-│   └── theme        # Tematización adaptativa (Material Design 3)
-└── util             # Validaciones (Regex) y funciones de utilidad
-```
+## 🏗️ Arquitectura: MVVM
+El proyecto aplica una separación estricta de responsabilidades:
+1.  **Model:** Entidades de Room y modelos de datos de Retrofit.
+2.  **View:** Pantallas desarrolladas 100% en **Jetpack Compose**.
+3.  **ViewModel:** Lógica de negocio y gestión de estado mediante `StateFlow`.
+4.  **Repository:** Capa intermedia que decide si los datos provienen de la API o de la base de datos local.
+
+---
+
+## 📸 Evidencias de Funcionamiento y Diagnóstico
+
+### 1. Diagnóstico de Memoria (LeakCanary)
+Se observa la traza de la fuga detectada y su posterior corrección (0 leaks).
+![LeakCanary Trace](screenshots/captura_leakcanary.png)
+
+### 2. Monitoreo de Rendimiento (Android Profiler)
+Validación del consumo de CPU y RAM durante la carga asíncrona de especialistas.
+![Android Profiler](screenshots/captura_profiler.png)
+
+### 3. Debugging y Resiliencia (Logcat)
+Captura que demuestra la interceptación de errores de red y el protocolo de respaldo (Fallback).
+![Logcat Debugging](screenshots/captura_logcat.png)
+
+### 4. Interfaz de Usuario y Librería Coil
+Renderizado de imágenes dinámicas desde API REST utilizando Coil.
+![App Screenshot](screenshots/captura_interfaz.png)
+
+---
+
+## 📁 Entregables Adicionales
+*   **📦 Archivo APK:** [Descargar app-debug.apk](app-debug.apk) (Ubicado en la raíz del repositorio).
+*   **📄 Informe Técnico:** [Ver Informe PDF](Documentacion/Informe_Tecnico_Liliana_Tapia.pdf).
+*   **🖼️ Capturas de Pantalla:** Ubicadas en la carpeta `/screenshots`.
 
 ---
 **Desarrollado por:** Liliana Tapia  
-**Carrera:** Desarrollo de aplicaciones II
+**Asignatura:** Desarrollo de Aplicaciones Móviles II  
 **Institución:** DUOC UC
-**Semana:** 5 - Formativa Individual

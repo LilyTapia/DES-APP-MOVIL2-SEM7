@@ -13,6 +13,7 @@ import androidx.activity.viewModels
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.core.content.ContextCompat
+import cl.duoc.veterinaria.receiver.ConnectivityReceiver
 import cl.duoc.veterinaria.service.NotificacionService
 import cl.duoc.veterinaria.ui.navigation.NavGraph
 import cl.duoc.veterinaria.ui.theme.VeterinariaAppTheme
@@ -21,7 +22,9 @@ import cl.duoc.veterinaria.ui.viewmodel.MainViewModel
 class MainActivity : ComponentActivity() {
 
     private val mainViewModel: MainViewModel by viewModels()
+    private lateinit var connectivityReceiver: ConnectivityReceiver
 
+    // Launcher para solicitar permisos de notificaciones en versiones recientes de Android
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
@@ -33,6 +36,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
+        // Inicializamos el receptor para monitorear cambios en la red
+        connectivityReceiver = ConnectivityReceiver(this)
+        connectivityReceiver.registrar()
+
         verificarYPedirPermisos()
         enableEdgeToEdge()
         
@@ -40,10 +47,15 @@ class MainActivity : ComponentActivity() {
             val isDarkMode by mainViewModel.isDarkMode.collectAsState()
             
             VeterinariaAppTheme(darkTheme = isDarkMode) {
-                // Se eliminó el Scaffold externo que causaba el doble espacio arriba
                 NavGraph(mainViewModel = mainViewModel)
             }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // Importante: desregistrar el receiver para evitar fugas de memoria
+        connectivityReceiver.desregistrar()
     }
 
     private fun verificarYPedirPermisos() {

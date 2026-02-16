@@ -21,6 +21,7 @@ import cl.duoc.veterinaria.ui.screens.AtencionesDuenoScreen
 import cl.duoc.veterinaria.ui.screens.BienvenidaScreen
 import cl.duoc.veterinaria.ui.screens.ListadoScreen
 import cl.duoc.veterinaria.ui.screens.PedidoScreen
+import cl.duoc.veterinaria.ui.screens.VeterinariosScreen
 import cl.duoc.veterinaria.ui.viewmodel.ConsultaViewModel
 import cl.duoc.veterinaria.ui.viewmodel.MainViewModel
 import cl.duoc.veterinaria.ui.viewmodel.RegistroViewModel
@@ -67,6 +68,15 @@ fun NavGraph(mainViewModel: MainViewModel = viewModel()) {
                     viewModel = consultaViewModel
                 )
             }
+            composable("seleccionar_veterinario") {
+                VeterinariosScreen(
+                    onBack = { navController.popBackStack() },
+                    onVeterinarioSelected = { vet ->
+                        registroViewModel.setVeterinario(vet)
+                        navController.popBackStack()
+                    }
+                )
+            }
             composable("farmacia_solo_screen") {
                 val nombreUsuario = loginUiState.currentUser?.nombreUsuario ?: "Invitado"
                 LaunchedEffect(Unit) { 
@@ -86,7 +96,11 @@ fun NavGraph(mainViewModel: MainViewModel = viewModel()) {
                 MascotaScreen(viewModel = registroViewModel, onNextClicked = { navController.navigate("servicio_screen") })
             }
             composable("servicio_screen") {
-                ServicioScreen(viewModel = registroViewModel, onNextClicked = { navController.navigate("pedidos_screen") })
+                ServicioScreen(
+                    viewModel = registroViewModel, 
+                    onNextClicked = { navController.navigate("pedidos_screen") },
+                    onSelectVeterinario = { navController.navigate("seleccionar_veterinario") }
+                )
             }
             composable("pedidos_screen") {
                 PedidoScreen(viewModel = registroViewModel, onNextClicked = { navController.navigate("resumen_screen") }, onBack = { navController.popBackStack() })

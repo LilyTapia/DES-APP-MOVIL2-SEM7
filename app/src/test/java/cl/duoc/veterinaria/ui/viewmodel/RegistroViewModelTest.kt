@@ -8,6 +8,7 @@ import cl.duoc.veterinaria.data.local.entities.PedidoEntity
 import cl.duoc.veterinaria.data.local.entities.UsuarioEntity
 import cl.duoc.veterinaria.model.Medicamento
 import cl.duoc.veterinaria.model.TipoServicio
+import cl.duoc.veterinaria.model.Veterinario
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -42,9 +43,10 @@ class RegistroViewModelTest {
         override val usuariosLocal: Flow<List<UsuarioEntity>> = flowOf(emptyList())
         override val pedidosLocal: Flow<List<PedidoEntity>> = flowOf(emptyList())
 
+        override fun init(context: Context) {}
+
         override fun registrarAtencion(
             nombreDueno: String,
-            cantidadMascotas: Int,
             nombreMascota: String,
             especieMascota: String,
             tipoServicio: String?,
@@ -58,17 +60,6 @@ class RegistroViewModelTest {
             (ultimaAtencionTipo as MutableStateFlow).value = tipoServicio
         }
 
-        override fun init(context: Context) {}
-        override fun eliminarMascota(nombreMascota: String) {}
-
-        override fun editarMascota(textoOriginal: String, textoNuevo: String) {}
-
-        override suspend fun agregarMascotaRoom(nombre: String, especie: String, edad: Int, peso: Double, dueno: String) {}
-
-        override suspend fun eliminarMascotaRoom(mascota: MascotaEntity) {}
-
-        override suspend fun agregarConsultaRoom(consulta: ConsultaEntity) {}
-
         override suspend fun registrarUsuario(nombre: String, email: String, pass: String): UsuarioEntity {
             return UsuarioEntity(nombreUsuario = nombre, email = email, pass = pass)
         }
@@ -76,6 +67,10 @@ class RegistroViewModelTest {
         override suspend fun buscarUsuario(email: String, user: String): UsuarioEntity? = null
 
         override suspend fun registrarPedidoRoom(pedido: PedidoEntity) {}
+
+        override suspend fun obtenerVeterinariosRemotos(): List<Veterinario> = emptyList()
+
+        override suspend fun eliminarMascotaRoom(mascota: MascotaEntity) {}
     }
 
     @Before
@@ -128,7 +123,6 @@ class RegistroViewModelTest {
 
         val uiState = viewModel.uiState.value
         assertNotNull(uiState.consultaRegistrada)
-        // La descripción de CONTROL es "Control Sano"
         assertEquals("Atención de Control Sano", uiState.consultaRegistrada?.descripcion)
 
         assertTrue(viewModel.serviceState.value is ServiceState.Stopped)

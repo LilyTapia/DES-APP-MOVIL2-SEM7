@@ -77,6 +77,10 @@ class RegistroViewModel(
         _uiState.update { it.copy(tipoServicio = servicio) }
     }
 
+    fun setVeterinario(veterinario: Veterinario) {
+        _uiState.update { it.copy(veterinarioSeleccionado = veterinario) }
+    }
+
     fun agregarMedicamentoAlCarrito(medicamento: Medicamento) {
         _uiState.update { currentState ->
             val carritoActual = currentState.carrito.toMutableList()
@@ -116,8 +120,6 @@ class RegistroViewModel(
 
         viewModelScope.launch {
             try {
-                Log.d(TAG, "Iniciando procesarRegistro...")
-                
                 _serviceState.value = ServiceState.Running("Validando datos...")
                 delay(1000)
 
@@ -128,21 +130,17 @@ class RegistroViewModel(
                 _serviceState.value = ServiceState.Running("Calculando costos...")
                 delay(1500)
                 
-                Log.d(TAG, "Confirmando reserva y pedido...")
                 _serviceState.value = ServiceState.Running("Confirmando reserva y pedido...")
                 delay(1500)
 
                 val nombreCliente = currentState.duenoNombre.ifBlank { "Venta Mostrador" }
                 val esSoloFarmacia = currentState.mascotaNombre.isBlank()
 
-                Log.d(TAG, "Cliente: $nombreCliente, Es solo farmacia: $esSoloFarmacia")
-
                 val nuevoPedido = if (currentState.carrito.isNotEmpty()) {
                     Pedido(Cliente(nombreCliente, "", ""), currentState.carrito)
                 } else null
 
                 if (nuevoPedido != null) {
-                    Log.d(TAG, "Registrando pedido en Room...")
                     val itemsTexto = nuevoPedido.detalles.joinToString { "${it.medicamento.nombre} x${it.cantidad}" }
                     val fechaActual = LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM HH:mm"))
                     repository.registrarPedidoRoom(
@@ -153,24 +151,22 @@ class RegistroViewModel(
                 var consultaFinal: Consulta? = null
 
                 if (!esSoloFarmacia) {
-                    Log.d(TAG, "Registrando atención veterinaria...")
                     val consultasExistentes = repository.consultasLocal.first()
                     
-                    val (veterinarioAsignado, fechaHoraReal) = AgendaVeterinario.buscarSiguienteDisponible(
+                    val (veterinarioAuto, fechaHoraReal) = AgendaVeterinario.buscarSiguienteDisponible(
                         consultasExistentes, 
                         Clock.systemDefaultZone()
                     )
+                    
+                    val veterinarioFinal = currentState.veterinarioSeleccionado ?: veterinarioAuto
                     
                     val fechaHoraFormateada = AgendaVeterinario.fmt(fechaHoraReal)
                     val servicio = currentState.tipoServicio ?: TipoServicio.CONTROL
                     val costoConsulta = ConsultaService.calcularCostoBase(servicio, 30)
                     val idCita = "AGENDA-" + (1000..9999).random()
 
-                    Log.d(TAG, "Asignando cita: $idCita con ${veterinarioAsignado.nombre} a las $fechaHoraFormateada")
-
                     repository.registrarAtencion(
                         nombreDueno = nombreCliente,
-                        cantidadMascotas = 1,
                         nombreMascota = currentState.mascotaNombre,
                         especieMascota = currentState.mascotaEspecie,
                         tipoServicio = servicio.descripcion,
@@ -178,7 +174,7 @@ class RegistroViewModel(
                         peso = currentState.mascotaPeso.toDoubleOrNull() ?: 0.0,
                         consultaId = idCita,
                         fechaHora = fechaHoraFormateada,
-                        veterinario = veterinarioAsignado.nombre,
+                        veterinario = veterinarioFinal.nombre,
                         costo = costoConsulta
                     )
                     
@@ -187,7 +183,7 @@ class RegistroViewModel(
                         descripcion = "Atención de ${servicio.descripcion}",
                         costoConsulta = costoConsulta,
                         fechaAtencion = fechaHoraReal,
-                        veterinarioAsignado = Veterinario(veterinarioAsignado.nombre, "")
+                        veterinarioAsignado = veterinarioFinal
                     )
                 }
 
@@ -197,20 +193,11 @@ class RegistroViewModel(
                     notificacionAutomaticaMostrada = true
                 ) }
                 _serviceState.value = ServiceState.Stopped
-                Log.i(TAG, "Registro procesado exitosamente.")
 
             } catch (e: ValidationException) {
-                Log.w(TAG, "Error de validación: ${e.message}")
-                _serviceState.value = ServiceState.Error(e.message ?: "Error de validación", e.code)
-            } catch (e: PersistenceException) {
-                Log.e(TAG, "Error de persistencia: ${e.message}", e)
-                _serviceState.value = ServiceState.Error(e.message ?: "Error al guardar los datos", e.code)
-            } catch (e: FunctionalException) {
-                Log.w(TAG, "Error funcional: ${e.message}")
-                _serviceState.value = ServiceState.Error(e.message ?: "Error funcional", e.code)
+                _serviceState.value = ServiceState.Error(e.message ?: "Error", e.code)
             } catch (e: Exception) {
-                Log.e(TAG, "Error inesperado durante el registro: ${e.message}", e)
-                _serviceState.value = ServiceState.Error("Ocurrió un error inesperado. Por favor, contacte a soporte.", "ERR_UNEXPECTED")
+                _serviceState.value = ServiceState.Error("Error inesperado", "ERR")
             }
         }
     }

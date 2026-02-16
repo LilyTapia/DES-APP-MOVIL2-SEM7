@@ -16,10 +16,10 @@ import kotlin.math.round
  * Servicio encargado de la lógica de agenda y asignación de veterinarios.
  */
 object AgendaVeterinario {
-    val veterinarios = listOf(
-        Veterinario("Dr. Pérez", "General"),
-        Veterinario("Dra. González", "Cirugía"),
-        Veterinario("Dr. Soto", "Dermatología")
+    var veterinarios = listOf(
+        Veterinario("Dr. Pérez", "General", "https://randomuser.me/api/portraits/men/1.jpg"),
+        Veterinario("Dra. González", "Cirugía", "https://randomuser.me/api/portraits/women/1.jpg"),
+        Veterinario("Dr. Soto", "Dermatología", "https://randomuser.me/api/portraits/men/2.jpg")
     )
 
     private val FORMATO_FECHA_HORA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")

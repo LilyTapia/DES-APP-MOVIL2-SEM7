@@ -25,10 +25,12 @@ enum class TipoServicio(val descripcion: String) {
 
 /**
  * Representa al profesional veterinario.
+ * Se añadió el campo fotoUrl para soportar la carga con Coil.
  */
 data class Veterinario(
     val nombre: String,
-    val especialidad: String
+    val especialidad: String,
+    val fotoUrl: String = "https://api.dicebear.com/7.x/avataaars/svg?seed=$nombre"
 )
 
 /**
