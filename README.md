@@ -1,70 +1,56 @@
-# Semana 6: Integrando librerías externas para ampliar funcionalidades móviles
+# VeterinariaApp - Actividad Formativa 5 (Semana 7)
+## Estructurando y preparando tu aplicación para el cierre
 
-## 📝 Descripción de la Actividad
-Este proyecto corresponde a la fase de potenciación de la **VeterinariaApp**, donde se han implementado técnicas avanzadas de desarrollo Android. El objetivo principal ha sido mejorar la conectividad, el rendimiento y la calidad del código mediante la integración de librerías externas, gestión de procesos en segundo plano y diagnóstico de memoria.
-
----
-
-## 🛠️ Tecnologías e Implementaciones Técnicas
-
-### 1. Procesos en Segundo Plano (Asincronía)
-Se seleccionó el flujo de **Registro de Consultas y Sincronización de Especialistas**. Para garantizar una experiencia fluida:
-*   **Kotlin Coroutines:** Se utilizan para realizar peticiones de red y operaciones de base de datos (Room) fuera del hilo principal (Main Thread), evitando el bloqueo de la interfaz.
-*   **Justificación:** El uso de Corrutinas permite escribir código asíncrono de forma secuencial y legible, optimizando el consumo de recursos.
-
-### 2. Integración de Librerías Externas (Paso 6)
-*   **Retrofit (API REST):** Utilizada para obtener la lista de médicos veterinarios desde un servidor externo.
-    *   *Justificación Técnica:* Provee una gestión tipada de las respuestas JSON y se integra nativamente con Corrutinas, lo que facilita el manejo de errores de red.
-*   **Coil (Carga de Imágenes):** Implementada para renderizar las fotografías de los especialistas y avatares de mascotas.
-    *   *Justificación Técnica:* Es una librería liviana optimizada para Jetpack Compose que gestiona automáticamente el caché y el redimensionamiento de imágenes.
-*   **LeakCanary (Diagnóstico):** Herramienta esencial para la detección de fugas de memoria.
-    *   *Justificación Técnica:* Permite identificar objetos que no están siendo recolectados por el Garbage Collector, asegurando que la app no consuma memoria innecesaria en sesiones prolongadas.
-
-### 3. Debugging y Gestión de Errores (Paso 3)
-*   **Resiliencia:** Se implementaron bloques `try-catch` en el repositorio para manejar excepciones de red.
-*   **Logcat:** Registro de errores críticos para facilitar el mantenimiento.
-*   **Modo Respaldo:** La app cuenta con una lista de especialistas local en caso de que la API remota no esté disponible.
-
-### 4. Diagnóstico de Memory Leaks (Paso 4 y 5)
-Se utilizó **LeakCanary** para diagnosticar la gestión de memoria. 
-*   **Escenario Detectado:** Se identificó una fuga real provocada por una referencia estática a la `MainActivity` (Simulador de Fuga).
-*   **Corrección:** Se eliminaron las referencias estáticas y se aseguró la liberación de recursos (como los receivers de conectividad) en el método `onDestroy()`.
+### 📝 Descripción de la Actividad
+Este proyecto corresponde a la fase de consolidación de la **VeterinariaApp**. El enfoque principal ha sido el diseño de una arquitectura modular y escalable (MVVM), asegurando una correcta separación de responsabilidades y la implementación de pruebas preliminares (unitarias y funcionales) para validar la robustez del software antes de su cierre y publicación.
 
 ---
 
-## 🏗️ Arquitectura: MVVM
-El proyecto aplica una separación estricta de responsabilidades:
-1.  **Model:** Entidades de Room y modelos de datos de Retrofit.
-2.  **View:** Pantallas desarrolladas 100% en **Jetpack Compose**.
-3.  **ViewModel:** Lógica de negocio y gestión de estado mediante `StateFlow`.
-4.  **Repository:** Capa intermedia que decide si los datos provienen de la API o de la base de datos local.
+### 🏗️ Arquitectura Implementada: MVVM
+Se ha estructurado el código siguiendo el patrón **Model-View-ViewModel**, garantizando que cada componente cumpla con el principio de responsabilidad única:
+1.  **Model (Capa de Datos):** 
+    *   Gestión de persistencia local con **Room**.
+    *   Modelos de datos para el consumo de API REST con **Retrofit**.
+2.  **View (Capa de Interfaz):** 
+    *   Interfaz moderna y reactiva desarrollada íntegramente en **Jetpack Compose**.
+3.  **ViewModel (Capa de Lógica):** 
+    *   Uso de `StateFlow` para la gestión de estados de la UI, asegurando que la lógica de negocio permanezca independiente de la vista.
+4.  **Repository:** 
+    *   Implementación de una capa intermedia que abstrae el origen de los datos (Local/Remoto) para el resto de la aplicación.
 
 ---
 
-## 📸 Evidencias de Funcionamiento y Diagnóstico
-
-### 1. Diagnóstico de Memoria (LeakCanary)
-Se observa la traza de la fuga detectada y su posterior corrección (0 leaks).
-![LeakCanary Trace](screenshots/captura_leakcanary.png)
-
-### 2. Monitoreo de Rendimiento (Android Profiler)
-Validación del consumo de CPU y RAM durante la carga asíncrona de especialistas.
-![Android Profiler](screenshots/captura_profiler.png)
-
-### 3. Debugging y Resiliencia (Logcat)
-Captura que demuestra la interceptación de errores de red y el protocolo de respaldo (Fallback).
-![Logcat Debugging](screenshots/captura_logcat.png)
-
-### 4. Interfaz de Usuario y Librería Coil
-Renderizado de imágenes dinámicas desde API REST utilizando Coil.
-![App Screenshot](screenshots/captura_interfaz.png)
+### 🛠️ Componentes de Android Jetpack Utilizados
+*   **Navigation Compose:** Para un flujo de navegación fluido y tipado entre pantallas.
+*   **Room Database:** Garantiza la persistencia de datos de mascotas, consultas y usuarios.
+*   **ViewModel & StateFlow:** Para mantener el estado de la aplicación de forma consistente frente a cambios de configuración.
 
 ---
 
-## 📁 Entregables Adicionales
-*   **📦 Archivo APK:** [Descargar app-debug.apk](app-debug.apk) (Ubicado en la raíz del repositorio).
-*   **📄 Informe Técnico:** [Ver Informe PDF](Documentacion/Informe_Tecnico_Liliana_Tapia.pdf).
-*   **🖼️ Capturas de Pantalla:** Ubicadas en la carpeta `/screenshots`.
+### 🧪 Estrategia de Pruebas Aplicada
+Se han diseñado e implementado pruebas preliminares sobre los componentes principales:
+
+1.  **Pruebas Unitarias (JUnit 4 + MockK):**
+    *   **Lógica de Negocio:** Validación de formularios (email, nombres) en `ValidationUtils`.
+    *   **Gestión de Estados:** Pruebas sobre `RegistroViewModel` para asegurar que el flujo de datos y la limpieza de información funcionen correctamente usando **Turbine**.
+2.  **Pruebas Funcionales (Compose Test / Espresso):**
+    *   **Navegación y UX:** Simulación de interacciones de usuario desde el Login hasta el registro de una nueva atención, verificando que la UI responda según lo esperado.
+
+---
+
+### 🚀 Instrucciones para Ejecución
+1.  Clonar el repositorio.
+2.  Abrir el proyecto en **Android Studio (versión Iguana o superior)**.
+3.  Sincronizar el proyecto con los archivos de Gradle.
+4.  Para ejecutar las pruebas:
+    *   **Unitarias:** Click derecho en la carpeta `test` -> *Run Tests*.
+    *   **Funcionales:** Abrir un emulador y ejecutar `./gradlew connectedDebugAndroidTest` desde la terminal.
+
+---
+
+### 📸 Evidencias de Validación
+*   **Estructura Arquitectónica:** Visualización de la organización por capas en el IDE.
+*   **Logs de Pruebas:** Registros de ejecución exitosa (BUILD SUCCESSFUL) tanto en pruebas unitarias como instrumentadas.
 
 ---
 **Desarrollado por:** Liliana Tapia  
