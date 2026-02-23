@@ -49,8 +49,18 @@ Se han diseñado e implementado pruebas preliminares sobre los componentes princ
 ---
 
 ### 📸 Evidencias de Validación
-*   **Estructura Arquitectónica:** Visualización de la organización por capas en el IDE.
-*   **Logs de Pruebas:** Registros de ejecución exitosa (BUILD SUCCESSFUL) tanto en pruebas unitarias como instrumentadas.
+
+#### 1. Estructura Arquitectónica (MVVM)
+Organización del proyecto por capas (Data, UI, ViewModel) aplicando el principio de responsabilidad única.
+![Estructura del Proyecto](screenshots/project_structure.png)
+
+#### 2. Pruebas Unitarias (JUnit + MockK)
+Ejecución exitosa de la lógica de negocio y gestión de estados en el ViewModel.
+![Pruebas Unitarias](screenshots/unit_tests_results.png)
+
+#### 3. Pruebas Funcionales (Espresso/Compose Test)
+Validación de flujos de navegación y UX mediante ejecución por terminal (CLI).
+![Pruebas Funcionales](screenshots/android_tests_results.png)
 
 ---
 **Desarrollado por:** Liliana Tapia  
